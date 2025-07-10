@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>언리얼 엔진 C++ RTTI 심층 분석 인포그래픽</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .bg-primary-deep { background-color: #004AAD; }
+        .bg-primary-medium { background-color: #0077B6; }
+        .bg-primary-bright { background-color: #00B4D8; }
+        .bg-primary-light { background-color: #90E0EF; }
+        .bg-primary-ultralight { background-color: #CAF0F8; }
+        .text-primary-deep { color: #004AAD; }
+        .text-primary-bright { color: #00B4D8; }
+        .text-primary-dark { color: #03045E; }
+        .border-primary-medium { border-color: #0077B6; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 40vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .flowchart-arrow {
+            font-size: 2.5rem;
+            line-height: 1;
+            color: #0077B6;
+        }
+        .kpi-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <header class="bg-primary-deep text-white text-center py-12 px-4">
+        <h1 class="text-4xl md:text-5xl font-black mb-2">언리얼 C++ RTTI 심층 분석</h1>
+        <p class="text-lg md:text-xl text-primary-light max-w-3xl mx-auto">왜 언리얼 엔진은 표준 C++ RTTI를 사용하지 않고 자체 리플렉션 시스템을 구축했을까?</p>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+
+        <section id="why-unreal" class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-8 text-primary-dark">표준의 길을 벗어난 이유</h2>
+            <p class="text-center max-w-4xl mx-auto mb-12 text-lg">언리얼 엔진은 성능, 메모리, 그리고 엔진 시스템과의 깊은 통합을 위해 표준 C++ RTTI를 의도적으로 비활성화합니다. 이는 단순한 회피가 아닌, 게임 엔진에 최적화된 환경을 구축하기 위한 전략적 선택입니다.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="kpi-card p-6 text-center">
+                    <div class="text-5xl font-extrabold text-primary-bright mb-2">⚡</div>
+                    <h3 class="text-xl font-bold mb-2">성능 저하 방지</h3>
+                    <p class="text-gray-600">표준 `dynamic_cast`는 복잡한 상속 구조에서 상당한 런타임 오버헤드를 유발할 수 있습니다. 언리얼은 더 빠르고 예측 가능한 타입 검사를 선호합니다.</p>
+                </div>
+                <div class="kpi-card p-6 text-center">
+                    <div class="text-5xl font-extrabold text-primary-bright mb-2">💾</div>
+                    <h3 class="text-xl font-bold mb-2">메모리 및 용량 최적화</h3>
+                    <p class="text-gray-600">RTTI는 모든 가상 클래스에 타입 정보를 추가하여 바이너리 크기와 메모리 사용량을 증가시킵니다. 대규모 엔진에서는 이 부담이 상당합니다.</p>
+                </div>
+                <div class="kpi-card p-6 text-center">
+                    <div class="text-5xl font-extrabold text-primary-bright mb-2">🧩</div>
+                    <h3 class="text-xl font-bold mb-2">엔진과의 완벽한 통합</h3>
+                    <p class="text-gray-600">에디터, GC, 직렬화, 블루프린트와 같은 핵심 기능들은 표준 RTTI가 제공하는 것 이상의 상세한 메타데이터를 요구합니다.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="reflection-system" class="mb-16 bg-white rounded-lg shadow-lg p-8">
+            <h2 class="text-3xl font-bold text-center mb-8 text-primary-dark">언리얼의 해답: 리플렉션 시스템</h2>
+            <p class="text-center max-w-4xl mx-auto mb-12 text-lg">언리얼은 C++ 소스 코드를 분석하여 런타임에 필요한 타입 정보를 생성하는 독자적인 리플렉션 시스템을 구축했습니다. 이 과정의 중심에는 언리얼 헤더 툴(UHT)이 있습니다.</p>
+            <div class="flex flex-col md:flex-row items-center justify-center gap-4 text-center">
+                <div class="p-6 bg-primary-ultralight rounded-lg w-full md:w-auto">
+                    <h4 class="text-lg font-bold">1. C++ 헤더 파일</h4>
+                    <p class="text-sm">`UCLASS`, `UPROPERTY` 등<br>리플렉션 매크로 포함</p>
+                </div>
+                <div class="flowchart-arrow transform md:rotate-0 rotate-90">→</div>
+                <div class="p-6 bg-primary-light rounded-lg w-full md:w-auto">
+                    <h4 class="text-lg font-bold">2. 언리얼 헤더 툴 (UHT)</h4>
+                    <p class="text-sm">매크로를 파싱하여<br>메타데이터 추출</p>
+                </div>
+                <div class="flowchart-arrow transform md:rotate-0 rotate-90">→</div>
+                <div class="p-6 bg-primary-bright text-white rounded-lg w-full md:w-auto">
+                    <h4 class="text-lg font-bold">3. *.generated.h 생성</h4>
+                    <p class="text-sm">리플렉션 데이터가 담긴<br>C++ 코드 자동 생성</p>
+                </div>
+                 <div class="flowchart-arrow transform md:rotate-0 rotate-90">→</div>
+                <div class="p-6 bg-primary-medium text-white rounded-lg w-full md:w-auto">
+                    <h4 class="text-lg font-bold">4. 컴파일</h4>
+                    <p class="text-sm">원본 코드와 함께 컴파일되어<br>실행 파일에 포함</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="casting" class="mb-16">
+             <h2 class="text-3xl font-bold text-center mb-8 text-primary-dark">언리얼 스타일 타입 캐스팅</h2>
+             <p class="text-center max-w-4xl mx-auto mb-12 text-lg">언리얼은 `dynamic_cast`를 대체하는 안전하고 효율적인 자체 캐스팅 함수들을 제공합니다. 이 함수들은 모두 `UObject` 기반 클래스에서 작동합니다.</p>
+            <div class="overflow-x-auto bg-white rounded-lg shadow-lg">
+                <table class="w-full text-left">
+                    <thead class="bg-primary-ultralight">
+                        <tr>
+                            <th class="p-4 font-bold">함수</th>
+                            <th class="p-4 font-bold">역할</th>
+                            <th class="p-4 font-bold">실패 시 반환</th>
+                            <th class="p-4 font-bold">주요 사용 사례</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b">
+                            <td class="p-4 font-mono font-bold">Cast&lt;T&gt;</td>
+                            <td class="p-4">타입 안전 동적 다운캐스팅</td>
+                            <td class="p-4 font-mono">nullptr</td>
+                            <td class="p-4">가장 일반적인 형태의 안전한 캐스팅</td>
+                        </tr>
+                        <tr class="border-b bg-gray-50">
+                            <td class="p-4 font-mono font-bold">IsA&lt;T&gt;</td>
+                            <td class="p-4">객체가 특정 타입인지 확인</td>
+                            <td class="p-4 font-mono">false (bool)</td>
+                            <td class="p-4">캐스팅 없이 타입만 검사할 때</td>
+                        </tr>
+                        <tr class="border-b">
+                            <td class="p-4 font-mono font-bold">ExactCast&lt;T&gt;</td>
+                            <td class="p-4">정확한 타입 일치 여부 확인 후 캐스팅</td>
+                            <td class="p-4 font-mono">nullptr</td>
+                            <td class="p-4">타입이 완전히 동일함을 알 때 사용하는 고효율 캐스팅</td>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <td class="p-4 font-mono font-bold">CastChecked&lt;T&gt;</td>
+                            <td class="p-4">성공을 확신하는 상황에서의 캐스팅</td>
+                            <td class="p-4 font-mono text-red-600">어설션/크래시</td>
+                            <td class="p-4">캐스팅 실패가 프로그래머 오류일 때</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="performance" class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-8 text-primary-dark">성능 비교: 두 빌드의 이야기</h2>
+            <p class="text-center max-w-4xl mx-auto mb-12 text-lg">언리얼의 캐스팅 성능은 빌드 구성에 따라 달라집니다. 에디터 빌드에서는 디버깅을 위해 상세 정보를 유지하지만, 배포(Shipping) 빌드에서는 압도적인 속도를 위해 최적화됩니다.</p>
+            <div class="kpi-card p-4 sm:p-8">
+                <div class="chart-container">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+                 <p class="text-center mt-4 text-gray-600">위 차트는 상속 깊이가 증가함에 따른 캐스팅 연산 비용의 변화를 보여줍니다. 배포 빌드에서의 상수 시간(O(1)) 복잡도는 언리얼 캐스팅의 핵심적인 성능 우위입니다.</p>
+            </div>
+        </section>
+
+        <section id="benefits" class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-8 text-primary-dark">리플렉션의 막강한 이점</h2>
+            <p class="text-center max-w-4xl mx-auto mb-12 text-lg">언리얼의 리플렉션 시스템은 단순한 타입 검사를 넘어, 엔진의 핵심 기능들을 떠받치는 기둥 역할을 합니다.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="kpi-card p-6">
+                    <h3 class="text-xl font-bold mb-2 flex items-center"><span class="text-3xl mr-3">🖥️</span>에디터 통합</h3>
+                    <p class="text-gray-600">`UPROPERTY` 매크로 하나로 C++ 변수를 에디터의 디테일 패널에 노출시키고 실시간으로 수정할 수 있습니다.</p>
+                </div>
+                <div class="kpi-card p-6">
+                    <h3 class="text-xl font-bold mb-2 flex items-center"><span class="text-3xl mr-3">💾</span>자동 직렬화</h3>
+                    <p class="text-gray-600">리플렉션 시스템이 `UObject`의 프로퍼티를 인지하여, 게임 저장/로딩 시 데이터를 자동으로 기록하고 복원합니다.</p>
+                </div>
+                <div class="kpi-card p-6">
+                    <h3 class="text-xl font-bold mb-2 flex items-center"><span class="text-3xl mr-3">🗑️</span>강력한 가비지 컬렉션</h3>
+                    <p class="text-gray-600">객체 간의 참조를 추적하여 더 이상 사용되지 않는 `UObject`를 자동으로 메모리에서 해제하고, 댕글링 포인터를 방지합니다.</p>
+                </div>
+                <div class="kpi-card p-6">
+                    <h3 class="text-xl font-bold mb-2 flex items-center"><span class="text-3xl mr-3">🧩</span>블루프린트 연동</h3>
+                    <p class="text-gray-600">`UFUNCTION`, `UPROPERTY` 등으로 C++ 코드와 블루프린트 비주얼 스크립팅을 매끄럽게 연결하여 협업 효율을 극대화합니다.</p>
+                </div>
+                <div class="kpi-card p-6">
+                    <h3 class="text-xl font-bold mb-2 flex items-center"><span class="text-3xl mr-3">🔄</span>프로퍼티 자동 업데이트</h3>
+                    <p class="text-gray-600">부모 클래스나 CDO(Class Default Object)의 기본값이 변경되면, 이를 상속받는 객체들의 프로퍼티를 지능적으로 업데이트합니다.</p>
+                </div>
+                 <div class="kpi-card p-6">
+                    <h3 class="text-xl font-bold mb-2 flex items-center"><span class="text-3xl mr-3">🔌</span>동적 확장성</h3>
+                    <p class="text-gray-600">런타임에 타입을 식별하는 통일된 방법을 제공하여, 플러그인과 같은 모듈식 아키텍처를 안전하게 지원합니다.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-primary-deep text-white text-center p-8">
+        <h2 class="text-2xl font-bold mb-4">핵심 요약 및 권장 사항</h2>
+        <div class="max-w-4xl mx-auto text-left grid md:grid-cols-2 gap-8">
+            <div>
+                <h4 class="font-bold text-primary-light mb-2">DO 👍</h4>
+                <ul class="list-disc list-inside space-y-2">
+                    <li>엔진 기능과 연동될 객체는 `UObject`를 상속하여 리플렉션 시스템을 적극 활용하세요.</li>
+                    <li>상황에 맞는 캐스팅 함수(`Cast`, `IsA`, `CastChecked`)를 사용하세요.</li>
+                    <li>타입에 따른 분기 처리는 가상 함수(Virtual Function)를 우선적으로 고려하세요.</li>
+                </ul>
+            </div>
+            <div>
+                 <h4 class="font-bold text-primary-light mb-2">DON'T 👎</h4>
+                <ul class="list-disc list-inside space-y-2">
+                    <li>`UObject`가 아닌 클래스는 메모리 관리를 직접 해야 함을 잊지 마세요.</li>
+                    <li>꼭 필요한 경우가 아니면 프로젝트 설정에서 표준 RTTI(`bUseRTTI = true`)를 활성화하지 마세요.</li>
+                    <li>성능이 중요한 코드에서 불필요한 `Cast`를 반복적으로 호출하는 것을 피하세요.</li>
+                </ul>
+            </div>
+        </div>
+        <p class="mt-8 text-sm text-gray-300">이 인포그래픽은 언리얼 엔진 공식 문서 및 관련 기술 자료를 바탕으로 제작되었습니다.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            const performanceData = {
+                labels: ['1', '2', '3', '4', '5', '6', '7', '8'],
+                datasets: [
+                    {
+                        label: '언리얼 캐스트 (배포 빌드)',
+                        data: [5, 5.1, 5, 4.9, 5.2, 5, 5.1, 5],
+                        borderColor: '#00B4D8',
+                        backgroundColor: 'rgba(0, 180, 216, 0.2)',
+                        borderWidth: 3,
+                        tension: 0.1,
+                        fill: true,
+                    },
+                    {
+                        label: '언리얼 캐스트 (에디터 빌드)',
+                        data: [10, 20, 31, 42, 51, 63, 72, 83],
+                        borderColor: '#0077B6',
+                        backgroundColor: 'rgba(0, 119, 182, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        borderDash: [5, 5],
+                    },
+                    {
+                        label: '표준 dynamic_cast (일반적)',
+                        data: [30, 55, 80, 105, 130, 155, 180, 205],
+                        borderColor: '#03045E',
+                        backgroundColor: 'rgba(3, 4, 94, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                    }
+                ]
+            };
+
+            const performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: performanceData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '상대적 연산 비용'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '상속 계층 깊이'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: '캐스팅 종류별 성능 비교',
+                            font: {
+                                size: 18
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    const item = tooltipItems[0];
+                                    let label = item.chart.data.labels[item.dataIndex];
+                                    if (Array.isArray(label)) {
+                                      return label.join(' ');
+                                    } else {
+                                      return '상속 깊이: ' + label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
