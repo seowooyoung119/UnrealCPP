@@ -19,7 +19,7 @@
 <br><br>
 
 ### 컴포넌트
-[컴포넌트 상속 총 정리표]([https://seowooyoung119.github.io/Component-/](https://github.com/seowooyoung119/Component-Tree)<br>
+[컴포넌트 상속 총 정리표](https://github.com/seowooyoung119/Component-Tree) <br>
 
 
 <br><br>
