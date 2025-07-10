@@ -15,7 +15,7 @@
 
 ### TObjecptr 가이드
 [TObjectpr의 안내서 ](https://github.com/seowooyoung119/UnrealCPP/blob/main/ObjectPtr%20%EA%B0%80%EC%9D%B4%EB%93%9C.md)
-
+[UE5 TObjectPtr과 UFUNCTION BlueprintCallable 호환성 문제](https://github.com/seowooyoung119/UnrealCPP/blob/main/UE5%20TObjectPtr%EA%B3%BC%20UFUNCTION%20BlueprintCallable%20%ED%98%B8%ED%99%98%EC%84%B1%20%EB%AC%B8%EC%A0%9C.md)
 
 ## 
 ### 액터
