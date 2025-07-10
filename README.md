@@ -4,6 +4,9 @@
 [접두사규칙](https://github.com/seowooyoung119/UnrealCPP/blob/main/%EC%A0%91%EB%91%90%EC%82%AC%20%EA%B7%9C%EC%B9%99.md)<br>
 [리플렉션 매크로](https://github.com/seowooyoung119/UnrealCPP/blob/main/%EB%A6%AC%ED%94%8C%EB%A0%89%EC%85%98%20%EB%A7%A4%ED%81%AC%EB%A1%9C.md)<br>
 
+### 자료형
+[자료형](https://github.com/seowooyoung119/UnrealCPP/blob/main/%EC%96%B8%EB%A6%AC%EC%96%BC%20%EC%97%94%EC%A7%84%20%EC%9E%90%EB%A3%8C%ED%98%95%20%EA%B0%80%EC%9D%B4%EB%93%9C.md)<br><br>
+
 ### 리플렉션 시스템
 [언리얼의 RTTI](https://seowooyoung119.github.io/URTTI/)<br>
 
