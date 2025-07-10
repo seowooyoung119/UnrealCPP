@@ -27,7 +27,8 @@
 ## 
 ### 액터
 [액터의 기본 요소](https://github.com/seowooyoung119/UnrealCPP/blob/main/%EC%95%A1%ED%84%B0%EC%9D%98%20%EA%B8%B0%EB%B3%B8%20%EC%9A%94%EC%86%8C.md)<br>
-[자주쓰는 코드](https://github.com/seowooyoung119/UnrealCPP/blob/main/%EC%9E%90%EC%A3%BC%EC%93%B0%EB%8A%94%20%EC%BD%94%EB%93%9C.md)
+[자주쓰는 코드](https://github.com/seowooyoung119/UnrealCPP/blob/main/%EC%9E%90%EC%A3%BC%EC%93%B0%EB%8A%94%20%EC%BD%94%EB%93%9C.md) <br>
+[이동 관련 컴포넌트](https://github.com/seowooyoung119/UnrealCPP/blob/main/%EC%9D%B4%EB%8F%99%20%EA%B4%80%EB%A0%A8%20%EC%BB%B4%ED%8F%AC%EB%84%8C%ED%8A%B8.md) 
 
 ### 라이프 사이클 함수
 [라이프 사이클 함수](https://github.com/seowooyoung119/UnrealCPP/blob/main/%EA%B8%B0%EB%B3%B8%EC%A0%81%EC%9D%B8%20%EB%9D%BC%EC%9D%B4%ED%94%8C%20%EC%82%AC%EC%9D%B4%ED%81%B4%20%ED%95%A8%EC%88%98.md)<br>
