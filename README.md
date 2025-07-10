@@ -33,7 +33,7 @@
 [라이프 사이클 함수](https://github.com/seowooyoung119/UnrealCPP/blob/main/%EA%B8%B0%EB%B3%B8%EC%A0%81%EC%9D%B8%20%EB%9D%BC%EC%9D%B4%ED%94%8C%20%EC%82%AC%EC%9D%B4%ED%81%B4%20%ED%95%A8%EC%88%98.md)<br>
 
 ### 이벤트 함수
-[기본 이벤트 함수]([https://github.com/seowooyoung119/UnrealCPP/tree/main](https://github.com/seowooyoung119/UnrealCPP/blob/main/%EA%B8%B0%EB%B3%B8%20%EC%9D%B4%EB%B2%A4%ED%8A%B8%20%ED%95%A8%EC%88%98.md))<br>
+[기본 이벤트 함수](https://github.com/seowooyoung119/UnrealCPP/blob/main/%EA%B8%B0%EB%B3%B8%20%EC%9D%B4%EB%B2%A4%ED%8A%B8%20%ED%95%A8%EC%88%98.md) <br>
 
 ---
 ### 본 강의 정리
