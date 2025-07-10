@@ -5,7 +5,7 @@
 [리플렉션 매크로](https://github.com/seowooyoung119/UnrealCPP/blob/main/%EB%A6%AC%ED%94%8C%EB%A0%89%EC%85%98%20%EB%A7%A4%ED%81%AC%EB%A1%9C.md)<br>
 
 ### 리플렉션 시스템
-[언리얼의 RTTI](https://github.com/seowooyoung119/URTTI)
+[언리얼의 RTTI](https://seowooyoung119.github.io/URTTI/)
 
 ## 
 ### 액터
