@@ -48,4 +48,6 @@
 ---
 ### 본 강의 정리
 
-[클린 코드](https://github.com/seowooyoung119/UnrealCPP/blob/main/%ED%81%B4%EB%A6%B0%20%EC%BD%94%EB%93%9C.md)
+[클린 코드](https://github.com/seowooyoung119/UnrealCPP/blob/main/%ED%81%B4%EB%A6%B0%20%EC%BD%94%EB%93%9C.md) <br>
+[리팩토링](https://github.com/seowooyoung119/UnrealCPP/blob/main/%EB%A6%AC%ED%8C%A9%ED%86%A0%EB%A7%81.md) <br>
+
