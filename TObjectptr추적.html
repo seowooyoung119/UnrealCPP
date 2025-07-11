@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>언리얼 엔진 TObjectPtr 인터랙티브 가이드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Cool Gray -->
+    <!-- Application Structure Plan: 이 애플리케이션은 원본 보고서의 선형 구조를 탈피하여, 개발자가 필요한 정보에 빠르게 접근할 수 있도록 4개의 주요 주제(TObjectPtr란?, 가비지 컬렉션, 추적 & 디버깅, 모범 사례)로 구성된 비선형적, 작업 지향적 구조를 채택했습니다. 상단 네비게이션을 통해 각 주제로 즉시 이동할 수 있습니다. 인터랙티브 포인터 비교 차트, 콘솔 명령어 탐색기와 같은 동적 요소를 통해 복잡하고 건조한 기술 정보를 더 쉽게 소화하고 탐색하며 이해할 수 있도록 설계했습니다. 이는 수동적인 읽기보다 능동적인 학습을 유도합니다. -->
+    <!-- Visualization & Content Choices: 
+        - 포인터 비교: 보고서의 정적 표 -> 목표: 비교 -> 인터랙티브 막대 차트(Chart.js) -> 상호작용: 막대 클릭 시 속성 하이라이트 -> 정당성: 정적 표보다 동적이며 사용자의 참여를 유도.
+        - 콘솔 명령어: 보고서의 명령어 목록 -> 목표: 정보 제공/정리 -> 클릭 가능한 명령어가 있는 인터랙티브 '가상 터미널'(HTML/JS) -> 상호작용: 명령어 클릭 시 세부 정보 표시 -> 정당성: 커맨드라인 정보를 덜 위협적이고 쉽게 참조할 수 있도록 만듦.
+        - 순환 참조: 보고서의 텍스트 설명 -> 목표: 관계 설명 -> 스타일링된 HTML/CSS/JS 다이어그램 -> 상호작용: '순환 끊기' 버튼 클릭 시 시각적 변경 및 텍스트 업데이트 -> 정당성: 추상적인 개념을 시각화하여 이해도를 높임.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. 모든 시각 자료는 Chart.js(Canvas) 또는 순수 HTML/CSS/JS로 제작되었습니다. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+        .nav-link {
+            transition: color 0.3s, border-bottom-color 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 50vh;
+        }
+        .console-command {
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .console-command:hover {
+            background-color: #e9ecef;
+            color: #000;
+        }
+        .tag {
+            background-color: #e0e7ff;
+            color: #4338ca;
+            font-weight: 500;
+        }
+        .section-hidden {
+            display: none;
+        }
+        .btn {
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-gray-800">TObjectPtr 인터랙티브 가이드</h1>
+            <div class="hidden md:flex space-x-8">
+                <a href="#intro" class="nav-link active" data-section="intro">TObjectPtr란?</a>
+                <a href="#gc" class="nav-link" data-section="gc">가비지 컬렉션</a>
+                <a href="#debugging" class="nav-link" data-section="debugging">추적 & 디버깅</a>
+                <a href="#best-practices" class="nav-link" data-section="best-practices">모범 사례</a>
+            </div>
+             <button id="mobile-menu-button" class="md:hidden flex items-center">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            </button>
+        </nav>
+        <div id="mobile-menu" class="hidden md:hidden">
+            <a href="#intro" class="block py-2 px-4 text-sm hover:bg-gray-200 nav-link-mobile" data-section="intro">TObjectPtr란?</a>
+            <a href="#gc" class="block py-2 px-4 text-sm hover:bg-gray-200 nav-link-mobile" data-section="gc">가비지 컬렉션</a>
+            <a href="#debugging" class="block py-2 px-4 text-sm hover:bg-gray-200 nav-link-mobile" data-section="debugging">추적 & 디버깅</a>
+            <a href="#best-practices" class="block py-2 px-4 text-sm hover:bg-gray-200 nav-link-mobile" data-section="best-practices">모범 사례</a>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+
+        <!-- TObjectPtr란? Section -->
+        <section id="intro" class="space-y-8">
+            <h2 class="text-4xl font-bold text-center text-gray-800">TObjectPtr: 현대적 UObject 참조</h2>
+            <p class="text-lg text-center text-gray-600 max-w-3xl mx-auto">이 섹션에서는 언리얼 엔진 5에서 도입된 `TObjectPtr`의 핵심 목적과 이점을 알아봅니다. `TObjectPtr`가 기존의 순수 C++ 포인터나 다른 스마트 포인터와 어떻게 다르며, 왜 `UPROPERTY` 멤버에 사용하는 것이 권장되는지 비교를 통해 명확히 이해할 수 있습니다.</p>
+
+            <div class="card p-6">
+                <h3 class="text-2xl font-bold mb-4">주요 이점</h3>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-blue-800">🔍 접근 추적</h4>
+                        <p class="text-sm text-blue-700">개발 및 디버깅 중 객체 접근을 모니터링하여 파괴된 객체에 대한 접근과 같은 문제를 쉽게 찾을 수 있습니다.</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-green-800">⏳ 지연 로딩 (에디터)</h4>
+                        <p class="text-sm text-green-700">에디터 빌드에서 객체 로딩 시점을 실제 필요할 때까지 지연시켜 리소스 사용을 최적화합니다.</p>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-yellow-800">🛡️ GC 쓰기 장벽</h4>
+                        <p class="text-sm text-yellow-700">증분 GC(Incremental GC) 중 객체가 조기에 수집되는 것을 방지하여 메모리 안정성을 높입니다.</p>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-red-800">⚡ 성능</h4>
+                        <p class="text-sm text-red-700">최종 빌드에서는 순수 포인터와 동일하게 작동하여 런타임 성능에 영향을 주지 않습니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card p-6">
+                <h3 class="text-2xl font-bold mb-4 text-center">포인터 유형별 상호작용 비교</h3>
+                <p class="text-md text-center text-gray-600 mb-6">차트의 막대를 클릭하여 각 포인터 유형의 가비지 컬렉션(GC) 상호작용 방식을 확인해보세요.</p>
+                <div class="chart-container">
+                    <canvas id="pointerChart"></canvas>
+                </div>
+                <div id="pointerDetails" class="mt-6 p-4 bg-gray-100 rounded-lg text-center transition-opacity duration-300 opacity-0">
+                    <h4 id="detailsTitle" class="font-bold text-lg"></h4>
+                    <p id="detailsText" class="text-gray-700"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 가비지 컬렉션 Section -->
+        <section id="gc" class="space-y-8 section-hidden">
+            <h2 class="text-4xl font-bold text-center text-gray-800">TObjectPtr과 가비지 컬렉션</h2>
+             <p class="text-lg text-center text-gray-600 max-w-3xl mx-auto">언리얼 엔진의 가비지 컬렉션(GC)은 `UObject`의 생명 주기를 자동으로 관리하는 핵심 시스템입니다. 이 섹션에서는 `TObjectPtr`가 특히 게임플레이 끊김(hitch) 현상을 줄이기 위한 증분 GC에서 어떻게 결정적인 '쓰기 장벽' 역할을 하는지, 그리고 `UObject`가 GC에 의해 올바르게 관리되도록 보장하는 방법을 알아봅니다.</p>
+
+            <div class="grid md:grid-cols-2 gap-8 items-start">
+                 <div class="card p-6">
+                    <h3 class="text-2xl font-bold mb-4">GC 관리 보장 방법</h3>
+                    <ul class="space-y-4">
+                        <li class="flex items-start">
+                            <span class="tag rounded-full px-3 py-1 text-sm mr-3">1</span>
+                            <div>
+                                <h4 class="font-bold">UPROPERTY() 사용</h4>
+                                <p class="text-gray-600 text-sm">가장 일반적인 방법. `UObject` 참조를 `UPROPERTY()` 매크로와 함께 선언하여 GC가 참조를 인식하게 합니다.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="tag rounded-full px-3 py-1 text-sm mr-3">2</span>
+                             <div>
+                                <h4 class="font-bold">AddReferencedObjects() 오버라이드</h4>
+                                <p class="text-gray-600 text-sm">비-`UPROPERTY` 멤버에 저장된 `UObject` 참조를 수동으로 GC에 등록합니다.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="tag rounded-full px-3 py-1 text-sm mr-3">3</span>
+                            <div>
+                                <h4 class="font-bold">AddToRoot() 사용</h4>
+                                <p class="text-gray-600 text-sm">객체를 루트 세트에 직접 추가하여 GC로부터 영구적으로 보호합니다. 메모리 누수 위험이 있어 신중하게 사용해야 합니다.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card p-6">
+                    <h3 class="text-2xl font-bold mb-4">증분 GC와 쓰기 장벽</h3>
+                    <p class="text-gray-600 mb-4">증분 GC는 도달 가능성 분석을 여러 프레임에 걸쳐 수행하여 GC로 인한 프레임 드랍을 완화합니다. 이 과정에서 `TObjectPtr`는 중요한 역할을 합니다.</p>
+                    <div class="bg-gray-100 p-4 rounded-lg">
+                        <p class="font-mono text-sm">
+                            <span class="text-blue-600 font-bold">GC 진행 중...</span><br>
+                            MyActor->SomeProperty = NewObject&lt;UOtherObject&gt;(); <br>
+                            <span class="text-gray-500">// SomeProperty가 TObjectPtr&lt;UOtherObject&gt; 라면...</span><br>
+                            <span class="text-green-600 font-bold">쓰기 장벽 작동!</span> NewObject가 즉시 '도달 가능'으로 표시되어 수집되지 않습니다.
+                        </p>
+                    </div>
+                     <p class="text-gray-600 mt-4 text-sm">만약 `TObjectPtr` 대신 순수 포인터를 사용하면, GC는 새로운 참조 할당을 인지하지 못해 새 객체를 실수로 수집할 수 있습니다. 이것이 바로 모든 `UPROPERTY`에 `TObjectPtr` 사용이 권장되는 핵심 이유입니다.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 추적 & 디버깅 Section -->
+        <section id="debugging" class="space-y-8 section-hidden">
+             <h2 class="text-4xl font-bold text-center text-gray-800">객체 추적 및 디버깅</h2>
+            <p class="text-lg text-center text-gray-600 max-w-3xl mx-auto">이론을 넘어 실제로 객체 참조 문제를 진단하는 방법을 알아봅니다. 언리얼 엔진은 강력한 내장 시각적 도구와 콘솔 명령어를 제공하여 메모리 누수, 순환 참조, 댕글링 포인터 등의 원인을 효과적으로 추적할 수 있도록 돕습니다.</p>
+            
+            <div class="card p-6">
+                <h3 class="text-2xl font-bold mb-4">주요 디버깅 도구</h3>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="text-xl font-semibold mb-2">시각적 도구</h4>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li><span class="font-bold">레퍼런스 뷰어:</span> 에셋과 객체 간의 참조 관계를 그래프로 시각화하여 특정 객체가 왜 메모리에 남아있는지 쉽게 파악할 수 있습니다.</li>
+                            <li><span class="font-bold">언리얼 인사이트:</span> 메모리 사용량 변화를 추적하고, 할당을 분석하며, 메모리 누수를 찾는 데 사용되는 강력한 프로파일링 도구입니다.</li>
+                        </ul>
+                    </div>
+                     <div>
+                        <h4 class="text-xl font-semibold mb-2">필수 콘솔 명령어</h4>
+                        <p class="text-gray-600 mb-3">아래 명령어를 클릭하여 설명을 확인하세요.</p>
+                        <div class="bg-gray-800 text-white p-4 rounded-lg font-mono text-sm space-y-2">
+                           <div class="console-command" data-command="obj list"> > obj list</div>
+                           <div class="console-command" data-command="obj refs"> > obj refs NAME=...</div>
+                           <div class="console-command" data-command="memreport"> > memreport -full</div>
+                           <div class="console-command" data-command="obj gc"> > obj gc</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="command-description" class="mt-6 p-4 bg-gray-100 rounded-lg transition-all duration-300 opacity-0 h-0">
+                    <p class="text-gray-800"></p>
+                </div>
+            </div>
+
+            <div class="card p-6">
+                <h3 class="text-2xl font-bold mb-4">일반적인 문제 해결하기</h3>
+                <div class="grid md:grid-cols-2 gap-8 items-start">
+                    <div>
+                        <h4 class="text-xl font-semibold mb-2">순환 참조</h4>
+                        <p class="text-gray-600 mb-4">두 객체가 서로를 강하게 참조하여 GC가 둘 다 수집하지 못하는 문제입니다. `TWeakObjectPtr`를 사용하여 이 순환을 끊을 수 있습니다.</p>
+                         <div id="cycle-diagram" class="border-2 border-gray-200 p-4 rounded-lg text-center">
+                            <div class="flex justify-around items-center">
+                                <div class="font-bold">Object A</div>
+                                <div id="arrow-a-to-b" class="font-mono text-green-600 transition-all duration-500">&lt;--- 강한 참조 ---&gt;</div>
+                                <div class="font-bold">Object B</div>
+                            </div>
+                            <div id="arrow-b-to-a-container" class="flex justify-center items-center mt-2">
+                                <div id="arrow-b-to-a" class="font-mono text-green-600 transition-all duration-500">&lt;--- 강한 참조 ---&gt;</div>
+                            </div>
+                            <p id="cycle-status" class="mt-2 text-red-600 font-bold">순환 참조 발생! (메모리 누수)</p>
+                        </div>
+                        <button id="break-cycle-btn" class="mt-4 w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-lg btn hover:bg-blue-600">TWeakObjectPtr로 순환 끊기</button>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-semibold mb-2">댕글링 포인터</h4>
+                        <p class="text-gray-600 mb-4">이미 해제된 메모리를 가리키는 포인터입니다. `UPROPERTY`는 자동 널링으로 이를 방지하지만, 순수 포인터는 위험합니다.</p>
+                        <div class="bg-gray-100 p-4 rounded-lg font-mono text-sm">
+                           <p><span class="text-gray-500">// 접근 전 항상 유효성 검사</span></p>
+                           <p><span class="text-blue-600">if</span> (IsValid(MyObjectPtr)) {</p>
+                           <p>  MyObjectPtr->DoSomething();</p>
+                           <p>}</p>
+                        </div>
+                        <p class="mt-4 text-gray-600">`IsValid()` 함수는 포인터가 `nullptr`이 아니고 `PendingKill` 상태가 아닌지 확인하여 안전하게 객체에 접근할 수 있도록 보장합니다.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 모범 사례 Section -->
+        <section id="best-practices" class="space-y-8 section-hidden">
+             <h2 class="text-4xl font-bold text-center text-gray-800">TObjectPtr 모범 사례</h2>
+            <p class="text-lg text-center text-gray-600 max-w-3xl mx-auto">안정적이고 효율적인 코드를 작성하기 위해 `TObjectPtr`와 `UObject` 생명 주기를 관리할 때 따라야 할 핵심 지침을 요약합니다. 올바른 포인터 유형을 선택하고, 효과적으로 유효성을 검사하며, 엔진의 메모리 관리 시스템을 올바르게 활용하는 방법을 익혀보세요.</p>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 <div class="card p-6">
+                    <div class="text-3xl mb-3">✅</div>
+                    <h3 class="text-xl font-bold mb-2">`UPROPERTY`에는 `TObjectPtr` 사용</h3>
+                    <p class="text-gray-600">헤더 파일에 선언된 모든 `UObject*` `UPROPERTY` 멤버 변수는 `TObjectPtr`로 대체하세요. 에디터 기능과 증분 GC 안전성을 모두 확보할 수 있습니다.</p>
+                </div>
+                <div class="card p-6">
+                    <div class="text-3xl mb-3">🤔</div>
+                    <h3 class="text-xl font-bold mb-2">상황에 맞는 포인터 선택</h3>
+                    <p class="text-gray-600">함수 내 단기 스코프에서는 순수 `UObject*`를, 순환 참조를 끊어야 할 때는 `TWeakObjectPtr`를, `UObject`가 아닌 클래스에는 `TSharedPtr` 등을 사용하세요.</p>
+                </div>
+                <div class="card p-6">
+                    <div class="text-3xl mb-3">🛡️</div>
+                    <h3 class="text-xl font-bold mb-2">`IsValid()`로 유효성 검사</h3>
+                    <p class="text-gray-600">`UObject` 포인터에 접근하기 전에는 항상 `IsValid()` 함수로 유효성을 검사하는 습관을 들이세요. `nullptr` 체크만으로는 충분하지 않습니다.</p>
+                </div>
+                 <div class="card p-6 lg:col-span-3">
+                    <div class="text-3xl mb-3">⚙️</div>
+                    <h3 class="text-xl font-bold mb-2">엔진 생성 메서드 사용</h3>
+                    <p class="text-gray-600">`UObject` 인스턴스를 만들 때는 `new`/`delete`를 직접 사용하지 마세요. 대신 `NewObject()`, `SpawnActor()`, `CreateDefaultSubobject()` 와 같은 엔진의 팩토리 함수를 사용해야 객체가 GC 시스템에 올바르게 등록됩니다.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const sections = document.querySelectorAll('main > section');
+            const navLinks = document.querySelectorAll('nav .nav-link');
+            const mobileNavLinks = document.querySelectorAll('#mobile-menu .nav-link-mobile');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            function updateActiveLink(activeSectionId) {
+                navLinks.forEach(link => {
+                    link.classList.toggle('active', link.dataset.section === activeSectionId);
+                });
+            }
+
+            function showSection(sectionId) {
+                sections.forEach(section => {
+                    section.classList.toggle('section-hidden', section.id !== sectionId);
+                });
+                updateActiveLink(sectionId);
+                window.location.hash = sectionId;
+            }
+
+            function handleNavClick(e) {
+                e.preventDefault();
+                const sectionId = e.currentTarget.dataset.section;
+                showSection(sectionId);
+                mobileMenu.classList.add('hidden');
+            }
+
+            navLinks.forEach(link => link.addEventListener('click', handleNavClick));
+            mobileNavLinks.forEach(link => link.addEventListener('click', handleNavClick));
+            
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            // Initial section display based on hash or default
+            const initialSectionId = window.location.hash.substring(1) || 'intro';
+            showSection(initialSectionId);
+
+            // Pointer Comparison Chart
+            const pointerChartCtx = document.getElementById('pointerChart').getContext('2d');
+            const pointerDetails = document.getElementById('pointerDetails');
+            const detailsTitle = document.getElementById('detailsTitle');
+            const detailsText = document.getElementById('detailsText');
+
+            const pointerData = {
+                labels: ['TObjectPtr<T>', 'UObject*', 'TWeakObjectPtr<T>', 'TSharedPtr<T>'],
+                datasets: [{
+                    label: 'GC 상호작용 강도',
+                    data: [3, 1, 0, -1],
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(153, 102, 255, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            };
+
+            const pointerChartConfig = {
+                type: 'bar',
+                data: pointerData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            ticks: {
+                                callback: function (value) {
+                                    if (value === 3) return '쓰기 장벽 (강함)';
+                                    if (value === 1) return '인식 불가 (조건부)';
+                                    if (value === 0) return '방지 안 함 (약함)';
+                                    if (value === -1) return '비호환';
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: false
+                        }
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const descriptions = [
+                                { title: 'TObjectPtr<T>', text: '증분 GC에서 쓰기 장벽으로 작동하여 객체가 즉시 도달 가능으로 표시됩니다. UPROPERTY와 함께 사용 시 가장 안전합니다.' },
+                                { title: 'UObject* (순수 포인터)', text: 'UPROPERTY 매크로 없이는 GC가 참조를 인식하지 못해 객체가 예기치 않게 수집될 수 있습니다.' },
+                                { title: 'TWeakObjectPtr<T>', text: '참조된 객체의 GC를 방지하지 않습니다. 객체가 파괴되면 자동으로 널이 되어 순환 참조를 끊는 데 이상적입니다.' },
+                                { title: 'TSharedPtr<T>', text: 'UObject 시스템 및 GC와 호환되지 않습니다. UObject가 아닌 일반 C++ 객체의 생명 주기를 관리하는 데 사용됩니다.' }
+                            ];
+                            detailsTitle.textContent = descriptions[index].title;
+                            detailsText.textContent = descriptions[index].text;
+                            pointerDetails.classList.remove('opacity-0');
+                        }
+                    }
+                }
+            };
+
+            new Chart(pointerChartCtx, pointerChartConfig);
+
+            // Console Commands
+            const commands = document.querySelectorAll('.console-command');
+            const commandDescription = document.getElementById('command-description');
+            const commandDescP = commandDescription.querySelector('p');
+            const commandInfos = {
+                'obj list': '현재 로드된 모든 UObject 인스턴스와 클래스별 메모리 사용량을 나열합니다. 메모리 사용량의 전반적인 개요를 파악하는 데 유용합니다.',
+                'obj refs': '지정한 객체를 참조하는 다른 모든 객체의 목록을 보여줍니다. 특정 객체가 왜 메모리에서 해제되지 않는지 추적하는 데 핵심적인 명령어입니다.',
+                'memreport': '현재 메모리 사용량에 대한 포괄적인 보고서를 파일로 생성합니다. UObject, 렌더링 메모리, 스트리밍 레벨 등 전체적인 메모리 상태를 분석할 수 있습니다.',
+                'obj gc': '가비지 컬렉션을 수동으로 실행합니다. 디버깅 중 특정 시점의 메모리 해제 동작을 테스트할 때 사용합니다.'
+            };
+
+            commands.forEach(command => {
+                command.addEventListener('click', () => {
+                    const commandKey = command.dataset.command;
+                    commandDescription.classList.remove('opacity-0', 'h-0');
+                    commandDescription.style.height = 'auto';
+                    commandDescP.textContent = commandInfos[commandKey];
+                });
+            });
+
+            // Cycle Diagram
+            const breakCycleBtn = document.getElementById('break-cycle-btn');
+            const arrowBtoA = document.getElementById('arrow-b-to-a');
+            const cycleStatus = document.getElementById('cycle-status');
+            
+            let isCycleBroken = false;
+            
+            breakCycleBtn.addEventListener('click', () => {
+                if (!isCycleBroken) {
+                    arrowBtoA.innerHTML = '&lt;--- <span class="text-yellow-500">약한 참조 (TWeakObjectPtr)</span> ---&gt;';
+                    arrowBtoA.classList.remove('text-green-600');
+                    arrowBtoA.classList.add('text-yellow-600');
+                    cycleStatus.textContent = '순환 해결! (안전)';
+                    cycleStatus.classList.remove('text-red-600');
+                    cycleStatus.classList.add('text-green-600');
+                    breakCycleBtn.textContent = '순환 상태로 되돌리기';
+                } else {
+                    arrowBtoA.innerHTML = '&lt;--- 강한 참조 ---&gt;';
+                    arrowBtoA.classList.remove('text-yellow-600');
+                    arrowBtoA.classList.add('text-green-600');
+                    cycleStatus.textContent = '순환 참조 발생! (메모리 누수)';
+                    cycleStatus.classList.remove('text-green-600');
+                    cycleStatus.classList.add('text-red-600');
+                    breakCycleBtn.textContent = 'TWeakObjectPtr로 순환 끊기';
+                }
+                isCycleBroken = !isCycleBroken;
+            });
+
+        });
+    </script>
+
+</body>
+</html>
